@@ -16,6 +16,8 @@ BRICKSET_BASE = "https://brickset.com/api/v3.asmx"
 REDIS_REACHABLE_KEY = "brickset:reachable"
 
 SETTING_API_KEY = "brickset.api_key"
+# userHash only populates the user-specific `collection` object on getSets;
+# Brickarr tracks ownership itself, so we never need to send it.
 SETTING_USER_HASH = "brickset.user_hash"
 
 
@@ -39,8 +41,7 @@ def get_api_key(db: Session) -> str:
 
 def brickset_call(db: Session, path: str, params: Optional[dict] = None, timeout: float = 20.0) -> dict:
     key = get_api_key(db)
-    user_hash = _get_setting(db, SETTING_USER_HASH) or ""
-    q = {"apiKey": key, "userHash": user_hash}
+    q = {"apiKey": key}
     if params:
         q.update(params)
     url = f"{BRICKSET_BASE}{path}"
@@ -48,16 +49,18 @@ def brickset_call(db: Session, path: str, params: Optional[dict] = None, timeout
         resp = client.get(url, params=q)
     if resp.status_code >= 400:
         raise RuntimeError(f"Brickset {path} -> {resp.status_code}: {resp.text[:300]}")
-    # TODO(report:003) confirm Brickset JSON envelope and field names
     return resp.json()
 
 
 def get_set_by_number(db: Session, set_number: str) -> dict:
+    # Brickset `params` is a stringified JSON object — Brickset quirk.
     return brickset_call(db, "/getSets", params={"params": f'{{"setNumber":"{set_number}"}}'})
 
 
 def get_instructions(db: Session, set_id: str) -> list:
-    # TODO(report:004) Brickset instructions endpoint URL pattern + PDF source URL field name
+    # Keyed by setID (the numeric Brickset id from getSets), NOT the set
+    # number. Entries carry the PDF link in `URL` (capitalised) plus
+    # `description`. Links are plain lego.com CDN PDFs, unauthenticated GET.
     data = brickset_call(db, "/getInstructions", params={"setID": set_id})
     return data.get("instructions", []) if isinstance(data, dict) else []
 

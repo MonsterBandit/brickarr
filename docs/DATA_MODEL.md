@@ -111,6 +111,12 @@ shared across every owner/copy.
 Unique index on `(set_no, match_no, part_item_type, part_no, color_id, is_alternate, is_counterpart)`.
 Captures BrickLink's Regular / Extra / Counterpart / Alternate semantics.
 
+> **Alpha note on `is_counterpart`.** BrickLink's `/subsets` endpoint does not
+> carry an `is_counterpart` flag — counterpart is an inventory concept exposed
+> via the `/supersets` endpoint, not subsets. The column is preserved for
+> forward compatibility but is left `false` for every row written by alpha
+> from a Subsets mirror.
+
 ### `ownership` (sparse)
 Records a part's actual owned count for one copy **only when it deviates from
 the status default.**

@@ -124,9 +124,11 @@ elsewhere and should pin a specific `image:` tag rather than `:latest`.
 - `GET /api/v1/system/status` — version, DB up, data-source reachability,
   BrickLink budget remaining today vs. configured cap.
 
-## Known unknowns
+## API-shape reports
 
-Things this scaffold guesses about and that need verification before the alpha
-deploys against the real services. See `docs/reports/` — the build leaves
-`# TODO(report:NNN)` markers in the code at every guess and a short report
-under `docs/reports/NNN-*.md` for each.
+`docs/reports/` is the bridge for real-world API shapes that the design chat
+can't supply. Each report names a specific assumption, what would verify it,
+and (once resolved) the correction that landed in the code. Reports 001–004
+are resolved by 005, which was reconciled against the official BrickLink and
+Brickset v3 documentation; the BrickLink and Brickset clients now reflect the
+corrected envelopes, field mappings, OAuth1 signing path, and colour seed.
