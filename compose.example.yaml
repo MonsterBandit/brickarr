@@ -1,0 +1,65 @@
+# Brickarr — public reference stack.
+#
+# This is an EXAMPLE only. It bundles the Brickarr image with MariaDB and Redis
+# so a fresh user can `docker compose -f compose.example.yaml --env-file .env up`
+# and have something to look at on port 5858.
+#
+# Production deployments will typically supply their own database / Redis and
+# pin the image tag. Set BRICKARR_DB_PASSWORD in .env before bringing the stack
+# up. BrickLink and Brickset credentials are NEVER configured here — they are
+# entered in-app at Settings -> Data Sources.
+
+services:
+  brickarr:
+    image: ghcr.io/monsterbandit/brickarr:latest
+    container_name: brickarr
+    restart: unless-stopped
+    ports:
+      - "5858:5858"
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+      BRICKARR_DB_HOST: mariadb
+      BRICKARR_DB_PORT: "3306"
+      BRICKARR_DB_NAME: "${BRICKARR_DB_NAME:-brickarr}"
+      BRICKARR_DB_USER: "${BRICKARR_DB_USER:-brickarr}"
+      BRICKARR_DB_PASSWORD: "${BRICKARR_DB_PASSWORD:?BRICKARR_DB_PASSWORD must be set in .env}"
+      BRICKARR_REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./config:/config
+      - ./storage:/storage
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  mariadb:
+    image: mariadb:11
+    container_name: brickarr-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: "${BRICKARR_DB_NAME:-brickarr}"
+      MARIADB_USER:     "${BRICKARR_DB_USER:-brickarr}"
+      MARIADB_PASSWORD: "${BRICKARR_DB_PASSWORD:?BRICKARR_DB_PASSWORD must be set in .env}"
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: brickarr-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis-data:/data
+
+volumes:
+  mariadb-data:
+  redis-data:
