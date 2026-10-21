@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Optional
 
 import httpx
@@ -8,12 +9,14 @@ from sqlalchemy.orm import Session
 
 from app.crypto import decrypt_secret
 from app.models.setting import Setting
-from app.redis_client import get_redis
 
 log = logging.getLogger(__name__)
 
 BRICKSET_BASE = "https://brickset.com/api/v3.asmx"
-REDIS_REACHABLE_KEY = "brickset:reachable"
+
+# Last test result and when it expires. Held in-process now Redis is gone
+# (BR.DK.02); a restart forgets it, as a Redis flush did.
+_reachable: Optional[tuple[bool, float]] = None
 
 SETTING_API_KEY = "brickset.api_key"
 # userHash only populates the user-specific `collection` object on getSets;
@@ -23,6 +26,11 @@ SETTING_USER_HASH = "brickset.user_hash"
 
 class MissingCredentialsError(Exception):
     pass
+
+
+def _set_reachable(ok: bool, ttl_seconds: int) -> None:
+    global _reachable
+    _reachable = (ok, time.monotonic() + ttl_seconds)
 
 
 def _get_setting(db: Session, key: str) -> Optional[str]:
@@ -76,19 +84,18 @@ def search_catalog(db: Session, term: str) -> list:
 def test_ping(db: Session) -> bool:
     try:
         brickset_call(db, "/checkKey")
-        get_redis().setex(REDIS_REACHABLE_KEY, 24 * 3600, "1")
+        _set_reachable(True, 24 * 3600)
         return True
     except MissingCredentialsError:
-        get_redis().setex(REDIS_REACHABLE_KEY, 300, "0")
+        _set_reachable(False, 300)
         return False
     except Exception as exc:  # noqa: BLE001
         log.warning("Brickset test ping failed: %s", exc)
-        get_redis().setex(REDIS_REACHABLE_KEY, 300, "0")
+        _set_reachable(False, 300)
         return False
 
 
 def last_reachable() -> Optional[bool]:
-    val = get_redis().get(REDIS_REACHABLE_KEY)
-    if val is None:
+    if _reachable is None or time.monotonic() >= _reachable[1]:
         return None
-    return val == "1"
+    return _reachable[0]

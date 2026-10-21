@@ -7,4 +7,4 @@ from app.models.instruction import Instruction  # noqa: F401
 from app.models.lightkit import LightKit, LightKitStatus  # noqa: F401
 from app.models.apikey import ApiKey  # noqa: F401
 from app.models.setting import Setting  # noqa: F401
-from app.models.history import JobHistory  # noqa: F401
+from app.models.job import Job  # noqa: F401

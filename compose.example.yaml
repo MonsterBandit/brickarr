@@ -1,13 +1,17 @@
-# Brickarr — public reference stack.
+# Brickarr — the simple install: one container, SQLite, nothing else to run.
 #
-# This is an EXAMPLE only. It bundles the Brickarr image with MariaDB and Redis
-# so a fresh user can `docker compose -f compose.example.yaml --env-file .env up`
-# and have something to look at on port 5858.
+#   cp .env.example .env      # optional: PUID/PGID/TZ/UMASK
+#   docker compose -f compose.example.yaml up -d
 #
-# Production deployments will typically supply their own database / Redis and
-# pin the image tag. Set BRICKARR_DB_PASSWORD in .env before bringing the stack
-# up. BrickLink and Brickset credentials are NEVER configured here — they are
-# entered in-app at Settings -> Data Sources.
+# Brickarr is then at http://localhost:5858. Point the /library mount at the
+# folder for your LEGO files, owned by the PUID/PGID user. Brickarr never
+# changes the ownership of files already there.
+#
+# Data-source keys (Brickset, and Rebrickable once it arrives) are entered in
+# the app at Settings -> Data Sources, never here. For MariaDB instead of
+# SQLite, see compose.mariadb.example.yaml.
+
+name: brickarr
 
 services:
   brickarr:
@@ -20,46 +24,11 @@ services:
       PUID: "${PUID:-1000}"
       PGID: "${PGID:-1000}"
       TZ: "${TZ:-Etc/UTC}"
-      BRICKARR_DB_HOST: mariadb
-      BRICKARR_DB_PORT: "3306"
-      BRICKARR_DB_NAME: "${BRICKARR_DB_NAME:-brickarr}"
-      BRICKARR_DB_USER: "${BRICKARR_DB_USER:-brickarr}"
-      BRICKARR_DB_PASSWORD: "${BRICKARR_DB_PASSWORD:?BRICKARR_DB_PASSWORD must be set in .env}"
-      BRICKARR_REDIS_URL: redis://redis:6379/0
+      UMASK: "${UMASK:-022}"
+      # To keep re-downloadable files apart from your own, mount /cache below
+      # and uncomment this line:
+      # BRICKARR_CACHE_DIR: /cache
     volumes:
-      - ./config:/config
-      - ./storage:/storage
-    depends_on:
-      mariadb:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  mariadb:
-    image: mariadb:11
-    container_name: brickarr-mariadb
-    restart: unless-stopped
-    environment:
-      MARIADB_DATABASE: "${BRICKARR_DB_NAME:-brickarr}"
-      MARIADB_USER:     "${BRICKARR_DB_USER:-brickarr}"
-      MARIADB_PASSWORD: "${BRICKARR_DB_PASSWORD:?BRICKARR_DB_PASSWORD must be set in .env}"
-      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
-    volumes:
-      - mariadb-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: brickarr-redis
-    restart: unless-stopped
-    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
-    volumes:
-      - redis-data:/data
-
-volumes:
-  mariadb-data:
-  redis-data:
+      - ./config:/config     # settings, the SQLite database, logs
+      - ./library:/library   # your LEGO files
+      # - ./cache:/cache     # optional: re-downloadable booklets

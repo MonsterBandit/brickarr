@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool
 
-from app.db import Base
+from app.config import settings
+from app.db import Base, make_engine
 from app import models  # noqa: F401  ensure all models register on Base.metadata
 
 config = context.config
@@ -16,33 +16,31 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-
-def _db_url() -> str:
-    host = os.getenv("BRICKARR_DB_HOST", "mariadb")
-    port = os.getenv("BRICKARR_DB_PORT", "3306")
-    name = os.getenv("BRICKARR_DB_NAME", "brickarr")
-    user = os.getenv("BRICKARR_DB_USER", "brickarr")
-    pw = os.getenv("BRICKARR_DB_PASSWORD", "")
-    return f"mysql+pymysql://{user}:{pw}@{host}:{port}/{name}?charset=utf8mb4"
+# Same settings and engine factory as the app (BRICKARR_DB_TYPE etc.); SQLite
+# needs batch mode for any later ALTER.
+_render_as_batch = settings.db_type == "sqlite"
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=_db_url(),
+        url=settings.db_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=_render_as_batch,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online() -> None:
-    section = config.get_section(config.config_ini_section) or {}
-    section["sqlalchemy.url"] = _db_url()
-    connectable = engine_from_config(section, prefix="sqlalchemy.", poolclass=pool.NullPool)
+    connectable = make_engine(poolclass=pool.NullPool)
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=_render_as_batch,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

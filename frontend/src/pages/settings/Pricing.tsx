@@ -9,7 +9,6 @@ interface PricingForm {
   soldStockBasis: 'sold' | 'stock';
   newUsedBasis: 'new' | 'used';
   cacheTtlHours: number;
-  dailyBudgetCap: number;
 }
 
 const DEFAULTS: PricingForm = {
@@ -17,7 +16,6 @@ const DEFAULTS: PricingForm = {
   soldStockBasis: 'sold',
   newUsedBasis: 'used',
   cacheTtlHours: 168,
-  dailyBudgetCap: 5000,
 };
 
 interface SettingValue<T> { value: T; }
@@ -70,10 +68,6 @@ export function Pricing() {
         <div className="form-row">
           <label>Cache TTL (hours)</label>
           <input type="number" min={1} value={form.cacheTtlHours} onChange={(e) => update('cacheTtlHours', Number(e.target.value))} />
-        </div>
-        <div className="form-row">
-          <label>Daily BrickLink Budget Cap</label>
-          <input type="number" min={1} value={form.dailyBudgetCap} onChange={(e) => update('dailyBudgetCap', Number(e.target.value))} />
         </div>
       </div>
     </Card>

@@ -62,7 +62,8 @@ export function AddNew() {
 
   return (
     <div className="page" style={{ maxWidth: 640 }}>
-      <PageHeader title="Add New Set" subtitle="Enqueues a manifest pull from BrickLink + Brickset enrichment." />
+      {/* Until the catalogue source arrives (BR.DK.09) the server answers 503 and the toast shows why. */}
+      <PageHeader title="Add New Set" subtitle="Needs a catalogue source, which arrives in BR.DK.09." />
       <form onSubmit={onSubmit} className="card">
         <div className="form-row">
           <label>Set Number</label>

@@ -1,9 +1,12 @@
-"""initial schema
+"""initial schema (SQLite or MariaDB)
 
 Revision ID: 0001
 Revises:
-Create Date: 2026-06-23
+Create Date: 2026-10-21
 
+One migration that runs on both databases (BR.DK.02): enums are stored as
+VARCHAR (non-native), and the mysql_* table options are dialect-prefixed, so
+SQLite ignores them and only MariaDB applies them.
 """
 from typing import Sequence, Union
 
@@ -15,15 +18,18 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-ITEM_TYPE = sa.Enum("SET", "MINIFIG", "PART", name="catalog_item_type")
-OWNED_ITEM_TYPE = sa.Enum("SET", "MINIFIG", "PART", name="owned_item_type")
-PART_ITEM_TYPE = sa.Enum("PART", "MINIFIG", name="part_item_type")
-OWNED_STATUS = sa.Enum("collecting", "complete", "wanted", "dismantled", name="owned_status")
-OWNED_CONDITION = sa.Enum("new", "used", name="owned_condition")
-PRICE_ITEM_TYPE = sa.Enum("SET", "MINIFIG", "PART", name="price_item_type")
-PRICE_GUIDE = sa.Enum("sold", "stock", name="price_guide_type")
-PRICE_COND = sa.Enum("new", "used", name="price_condition")
-LIGHT_STATUS = sa.Enum("owned", "wanted", name="light_kit_status")
+ITEM_TYPE = sa.Enum("SET", "MINIFIG", "PART", name="catalog_item_type", native_enum=False)
+OWNED_ITEM_TYPE = sa.Enum("SET", "MINIFIG", "PART", name="owned_item_type", native_enum=False)
+PART_ITEM_TYPE = sa.Enum("PART", "MINIFIG", name="part_item_type", native_enum=False)
+OWNED_STATUS = sa.Enum("collecting", "complete", "wanted", "dismantled", name="owned_status", native_enum=False)
+OWNED_CONDITION = sa.Enum("new", "used", name="owned_condition", native_enum=False)
+PRICE_ITEM_TYPE = sa.Enum("SET", "MINIFIG", "PART", name="price_item_type", native_enum=False)
+PRICE_GUIDE = sa.Enum("sold", "stock", name="price_guide_type", native_enum=False)
+PRICE_COND = sa.Enum("new", "used", name="price_condition", native_enum=False)
+LIGHT_STATUS = sa.Enum("owned", "wanted", name="light_kit_status", native_enum=False)
+
+# SQLite only auto-numbers an INTEGER PRIMARY KEY; MariaDB keeps BIGINT.
+BIGINT_PK = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 TABLE_KW = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
 
@@ -75,7 +81,7 @@ def upgrade() -> None:
 
     op.create_table(
         "owned_item",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
         sa.Column("item_type", OWNED_ITEM_TYPE, nullable=False),
         sa.Column("item_no", sa.String(32), nullable=False),
         sa.Column("status", OWNED_STATUS, nullable=False),
@@ -98,7 +104,7 @@ def upgrade() -> None:
 
     op.create_table(
         "set_part",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
         sa.Column("set_no", sa.String(32), nullable=False),
         sa.Column("part_item_type", PART_ITEM_TYPE, nullable=False),
         sa.Column("part_no", sa.String(32), nullable=False),
@@ -124,10 +130,10 @@ def upgrade() -> None:
 
     op.create_table(
         "ownership",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("owned_item_id", sa.BigInteger(), nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
+        sa.Column("owned_item_id", BIGINT_PK, nullable=False),
         sa.Column("copy_index", sa.SmallInteger(), nullable=False),
-        sa.Column("set_part_id", sa.BigInteger(), nullable=False),
+        sa.Column("set_part_id", BIGINT_PK, nullable=False),
         sa.Column("quantity_owned", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
@@ -140,7 +146,7 @@ def upgrade() -> None:
 
     op.create_table(
         "price_cache",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
         sa.Column("item_type", PRICE_ITEM_TYPE, nullable=False),
         sa.Column("item_no", sa.String(32), nullable=False),
         sa.Column("color_id", sa.Integer(), nullable=True),
@@ -166,7 +172,7 @@ def upgrade() -> None:
 
     op.create_table(
         "instruction",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
         sa.Column("set_no", sa.String(32), nullable=False),
         sa.Column("description", sa.String(255), nullable=True),
         sa.Column("source_url", sa.String(512), nullable=True),
@@ -181,7 +187,7 @@ def upgrade() -> None:
 
     op.create_table(
         "light_kit",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
         sa.Column("set_no", sa.String(32), nullable=False),
         sa.Column("vendor", sa.String(128), nullable=True),
         sa.Column("name", sa.String(255), nullable=True),
@@ -197,7 +203,7 @@ def upgrade() -> None:
 
     op.create_table(
         "api_key",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
         sa.Column("name", sa.String(128), nullable=False),
         sa.Column("key_hash", sa.String(255), nullable=False),
         sa.Column("key_prefix", sa.String(12), nullable=False),
@@ -218,24 +224,26 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "job_history",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("job_id", sa.String(64), nullable=False),
-        sa.Column("event_type", sa.String(64), nullable=False),
-        sa.Column("name", sa.String(255), nullable=True),
+        "job",
+        sa.Column("id", BIGINT_PK, autoincrement=True, nullable=False),
+        sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("kind", sa.String(64), nullable=False),
         sa.Column("status", sa.String(32), nullable=False),
+        sa.Column("progress", sa.BigInteger(), nullable=False),
+        sa.Column("total", sa.BigInteger(), nullable=False),
         sa.Column("message", sa.Text(), nullable=True),
-        sa.Column("started_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("started_at", sa.DateTime(), nullable=True),
         sa.Column("finished_at", sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("job_id", name="uq_job_history_job_id"),
-        sa.Index("ix_job_history_event_type", "event_type"),
+        sa.Index("ix_job_kind", "kind"),
+        sa.Index("ix_job_status", "status"),
         **TABLE_KW,
     )
 
 
 def downgrade() -> None:
-    op.drop_table("job_history")
+    op.drop_table("job")
     op.drop_table("setting")
     op.drop_table("api_key")
     op.drop_table("light_kit")
@@ -246,8 +254,3 @@ def downgrade() -> None:
     op.drop_table("owned_item")
     op.drop_table("color")
     op.drop_table("catalog_item")
-    for e in (
-        LIGHT_STATUS, PRICE_COND, PRICE_GUIDE, PRICE_ITEM_TYPE,
-        OWNED_CONDITION, OWNED_STATUS, PART_ITEM_TYPE, OWNED_ITEM_TYPE, ITEM_TYPE,
-    ):
-        e.drop(op.get_bind(), checkfirst=True)

@@ -8,31 +8,17 @@ from sqlalchemy.orm import Session
 
 from app.models.catalog import CatalogItem, ItemType
 from app.models.instruction import Instruction
-from app.models.parts import PartItemType, SetPart
-from app.services import bricklink, brickset
+from app.services import brickset
 
 log = logging.getLogger(__name__)
 
-_PART_ITEM_TYPES = {"PART", "MINIFIG"}
+# The BrickLink client is gone (BRK-31). Set details and parts lists come from
+# Rebrickable in BR.DK.09; until then adding a set is refused with this message.
+CATALOGUE_UNAVAILABLE = "Catalogue source arrives in BR.DK.09"
 
 
-def _ensure_catalog_row(db: Session, item_type: ItemType, item_no: str) -> CatalogItem:
-    row = db.get(CatalogItem, (item_type, item_no))
-    if row is None:
-        row = CatalogItem(item_type=item_type, item_no=item_no)
-        db.add(row)
-        db.flush()
-    return row
-
-
-def _coerce_bool(v: Any) -> bool:
-    # BrickLink returns is_alternate as a real JSON bool in practice but the
-    # docs table labels it "String" — accept both shapes.
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, str):
-        return v.strip().lower() == "true"
-    return bool(v)
+def catalogue_available() -> bool:
+    return False
 
 
 def _ci_get(d: Optional[dict], key: str) -> Any:
@@ -45,61 +31,6 @@ def _ci_get(d: Optional[dict], key: str) -> Any:
         if isinstance(k, str) and k.lower() == lower:
             return v
     return None
-
-
-def mirror_catalog_set(db: Session, set_number: str) -> CatalogItem:
-    data = bricklink.get_catalog_item(db, "SET", set_number)
-    row = _ensure_catalog_row(db, ItemType.SET, set_number)
-    row.name = data.get("name") or row.name
-    # BrickLink live JSON sometimes serialises this as `categoryID`.
-    row.category_id = data.get("category_id") or data.get("categoryID")
-    row.year_released = data.get("year_released")
-    row.image_url = data.get("image_url")
-    row.thumbnail_url = data.get("thumbnail_url")
-    row.weight_g = data.get("weight")
-    row.dim_x_cm = data.get("dim_x")
-    row.dim_y_cm = data.get("dim_y")
-    row.dim_z_cm = data.get("dim_z")
-    row.catalog_synced_at = datetime.utcnow()
-    db.commit()
-    return row
-
-
-def mirror_subsets(db: Session, set_number: str) -> int:
-    subsets = bricklink.get_subsets(db, "SET", set_number, break_minifigs=False)
-    inserted = 0
-    for group in subsets:
-        match_no = int(group.get("match_no", 0) or 0)
-        for entry in group.get("entries", []):
-            item = entry.get("item") or {}
-            part_type_raw = (item.get("type") or "PART").upper()
-            # Subsets can include INSTRUCTION / ORIGINAL_BOX / BOOK rows; the
-            # parts manifest is only PART and MINIFIG.
-            if part_type_raw not in _PART_ITEM_TYPES:
-                continue
-            part_type = PartItemType.MINIFIG if part_type_raw == "MINIFIG" else PartItemType.PART
-            part_no = item.get("no")
-            if not part_no:
-                continue
-            color_id = int(entry.get("color_id", 0) or 0)
-            _ensure_catalog_row(db, ItemType[part_type.value], part_no)
-            sp = SetPart(
-                set_no=set_number,
-                part_item_type=part_type,
-                part_no=part_no,
-                color_id=color_id,
-                quantity=int(entry.get("quantity", 0) or 0),
-                extra_quantity=int(entry.get("extra_quantity", 0) or 0),
-                is_alternate=_coerce_bool(entry.get("is_alternate", False)),
-                # No is_counterpart flag on /subsets entries — that's an
-                # inventory concept exposed via /supersets. Default false.
-                is_counterpart=_coerce_bool(entry.get("is_counterpart", False)),
-                match_no=match_no,
-            )
-            db.add(sp)
-            inserted += 1
-    db.commit()
-    return inserted
 
 
 def _select_brickset_entry(sets: list, set_number: str) -> Optional[dict]:

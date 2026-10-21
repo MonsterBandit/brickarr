@@ -39,10 +39,7 @@ function Queue() {
         { key: 'status', header: 'Status' },
         {
           key: 'progress', header: 'Progress',
-          render: (r) =>
-            r.totalBytes && r.progressBytes !== undefined
-              ? <ProgressBar value={r.progressBytes} max={r.totalBytes} />
-              : '—',
+          render: (r) => (r.total ? <ProgressBar value={r.progress} max={r.total} /> : '—'),
         },
         { key: 'startedAt', header: 'Started', render: (r) => r.startedAt ?? '—' },
       ]}
@@ -64,9 +61,9 @@ function History() {
       empty="No history yet."
       columns={[
         { key: 'name', header: 'Name' },
-        { key: 'eventType', header: 'Event' },
+        { key: 'kind', header: 'Kind' },
         { key: 'status', header: 'Status' },
-        { key: 'completedAt', header: 'Completed' },
+        { key: 'finishedAt', header: 'Finished', render: (r) => r.finishedAt ?? '—' },
       ]}
       rows={rows}
     />

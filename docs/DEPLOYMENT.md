@@ -35,32 +35,37 @@ build tools survive into the final image.
 
 | Container path | Purpose |
 | --- | --- |
-| `/config`  | App config, the per-instance secret key, rotating logs, the first-run plaintext API key (`initial_api_key.txt`). |
-| `/storage` | Library: instruction PDFs, images, light-kit PDFs. |
+| `/config`  | Brickarr's own files: settings, the SQLite database (`brickarr.db`), the per-instance secret key, rotating logs, the first-run plaintext API key (`initial_api_key.txt`). The only declared `VOLUME`. The entrypoint keeps all of it owned by `PUID`/`PGID`. |
+| `/library` | The user's own files (uploaded instructions, light-kit and accessory PDFs, photos, documents). Never `chown`ed recursively: give the host folder to the `PUID`/`PGID` user and existing files keep their owner. |
+| `/cache`   | Optional. Files Brickarr downloaded itself and can download again (official instruction booklets). Mount it **and** set `BRICKARR_CACHE_DIR=/cache` to keep them apart from your own files; otherwise they live in the library. Not a declared `VOLUME`, so an unmounted `/cache` never becomes an anonymous volume. |
 
-`mariadb` and `redis` keep their own volumes (see `compose.example.yaml`).
-Brickarr never writes the database files itself — that's the database
-container's job.
+With `BRICKARR_DB_TYPE=mariadb` the database lives in the MariaDB container's
+own volume (see `compose.mariadb.example.yaml`); Brickarr never writes the
+database files itself. There is no Redis.
 
 ## Environment contract
 
-Connection and process variables only. Data-source credentials (BrickLink,
-Brickset) are entered at runtime in **Settings → Data Sources** and stored
-encrypted at rest. Never set them via environment.
+Connection and process variables only. Data-source credentials (Brickset, and
+Rebrickable once it arrives) are entered at runtime in **Settings → Data
+Sources** and stored encrypted at rest. Never set them via environment.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `BRICKARR_DB_HOST`     | yes | (compose) `mariadb`    | MariaDB host |
-| `BRICKARR_DB_PORT`     | no  | `3306`                 | MariaDB port |
-| `BRICKARR_DB_NAME`     | yes | `brickarr`             | Database name |
-| `BRICKARR_DB_USER`     | yes | `brickarr`             | Database user |
-| `BRICKARR_DB_PASSWORD` | yes | — (must be set)        | Database password |
-| `BRICKARR_REDIS_URL`   | yes | `redis://redis:6379/0` | Redis URL |
 | `PUID`                 | no  | `1000`                 | Run-as user id |
 | `PGID`                 | no  | `1000`                 | Run-as group id |
 | `TZ`                   | no  | `Etc/UTC`              | Container timezone |
+| `UMASK`                | no  | `022`                  | File mask for everything Brickarr creates (`002` makes folders group-writable) |
+| `BRICKARR_DB_TYPE`     | no  | `sqlite`               | `sqlite` (a file in `/config`) or `mariadb` |
+| `BRICKARR_DB_HOST`     | MariaDB only | `mariadb`     | MariaDB host |
+| `BRICKARR_DB_PORT`     | no  | `3306`                 | MariaDB port |
+| `BRICKARR_DB_NAME`     | no  | `brickarr`             | MariaDB database name |
+| `BRICKARR_DB_USER`     | no  | `brickarr`             | MariaDB user |
+| `BRICKARR_DB_PASSWORD` | MariaDB only | — (must be set) | MariaDB password |
+| `BRICKARR_LIBRARY_DIR` | no  | `/library`             | The user's files |
+| `BRICKARR_CACHE_DIR`   | no  | the library dir        | Re-downloadable files; set to `/cache` when that is mounted |
 | `BRICKARR_CONFIG_DIR`  | no  | `/config`              | Override the config mount (testing only) |
-| `BRICKARR_STORAGE_DIR` | no  | `/storage`             | Override the storage mount (testing only) |
+| `BRICKARR_VERSION`     | —   | build argument         | Set by the image build (`--build-arg BRICKARR_VERSION=…`); shown by `/system/status` |
+| `BRICKARR_<NAME>_FILE` | no  | —                      | Read `BRICKARR_<NAME>` from a file, for Docker secrets (e.g. `BRICKARR_DB_PASSWORD_FILE=/run/secrets/db_password`). One trailing newline is trimmed; setting both forms of a name stops the app. |
 
 ## Entrypoint behaviour
 

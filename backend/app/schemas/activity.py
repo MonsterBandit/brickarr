@@ -7,12 +7,15 @@ from app.schemas.base import CamelModel
 
 
 class QueueItem(CamelModel):
-    job_id: str
-    name: Optional[str] = None
+    id: int
+    name: str
+    kind: str
     status: str
-    progress_bytes: int = 0
-    total_bytes: int = 0
-    error: Optional[str] = None
+    progress: int = 0
+    total: int = 0
+    message: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
 
 
 class QueueEnvelope(CamelModel):
@@ -20,12 +23,13 @@ class QueueEnvelope(CamelModel):
 
 
 class HistoryItem(CamelModel):
-    job_id: str
-    event_type: str
-    name: Optional[str] = None
+    id: int
+    name: str
+    kind: str
     status: str
     message: Optional[str] = None
-    started_at: datetime
+    created_at: datetime
+    started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
 
 

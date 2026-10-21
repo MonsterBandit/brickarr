@@ -72,29 +72,33 @@ export interface InstructionRow {
 }
 
 export interface QueueItem {
-  id: string;
+  id: number;
   name: string;
+  kind: string;
   status: string;
-  progressBytes?: number;
-  totalBytes?: number;
-  startedAt?: string;
+  progress: number;
+  total: number;
+  message?: string | null;
+  createdAt: string;
+  startedAt?: string | null;
 }
 
 export interface HistoryItem {
   id: number;
-  eventType: string;
   name: string;
-  completedAt: string;
+  kind: string;
   status: string;
+  message?: string | null;
+  createdAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
 }
 
 export interface SystemStatus {
   version: string;
-  database: { connected: boolean };
-  dataSources: {
-    bricklink: { reachable: boolean; budgetRemaining?: number; budgetCap?: number };
-    brickset: { reachable: boolean };
-  };
+  dbType: 'sqlite' | 'mariadb';
+  dbOk: boolean;
+  sources: { brickset?: boolean | null };
 }
 
 export interface SystemTask {

@@ -4,10 +4,10 @@ import enum
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import BigInteger, DateTime, Enum, String
+from sqlalchemy import DateTime, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import Base
+from app.db import Base, BigIntPK
 
 
 class LightKitStatus(str, enum.Enum):
@@ -19,12 +19,12 @@ class LightKit(Base):
     __tablename__ = "light_kit"
     __table_args__ = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     set_no: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     vendor: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[LightKitStatus] = mapped_column(
-        Enum(LightKitStatus, name="light_kit_status"), nullable=False, default=LightKitStatus.wanted
+        Enum(LightKitStatus, name="light_kit_status", native_enum=False), nullable=False, default=LightKitStatus.wanted
     )
     product_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     local_pdf_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import enum
 
-from sqlalchemy import BigInteger, Boolean, Enum, ForeignKey, ForeignKeyConstraint, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Enum, ForeignKey, ForeignKeyConstraint, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import Base
+from app.db import Base, BigIntPK
 
 
 class PartItemType(str, enum.Enum):
@@ -28,9 +28,9 @@ class SetPart(Base):
         {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"},
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     set_no: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
-    part_item_type: Mapped[PartItemType] = mapped_column(Enum(PartItemType, name="part_item_type"), nullable=False)
+    part_item_type: Mapped[PartItemType] = mapped_column(Enum(PartItemType, name="part_item_type", native_enum=False), nullable=False)
     part_no: Mapped[str] = mapped_column(String(32), nullable=False)
     color_id: Mapped[int] = mapped_column(ForeignKey("color.color_id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

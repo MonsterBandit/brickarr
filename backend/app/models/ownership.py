@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, SmallInteger, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import Base
+from app.db import Base, BigIntPK
 
 
 class Ownership(Base):
@@ -15,7 +15,7 @@ class Ownership(Base):
         {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"},
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
     owned_item_id: Mapped[int] = mapped_column(ForeignKey("owned_item.id"), nullable=False)
     copy_index: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     set_part_id: Mapped[int] = mapped_column(ForeignKey("set_part.id"), nullable=False)

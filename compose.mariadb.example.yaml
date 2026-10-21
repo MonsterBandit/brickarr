@@ -1,0 +1,64 @@
+# Brickarr with MariaDB, for people who'd rather run a database server than
+# use the built-in SQLite file (see compose.example.yaml for the simple install).
+#
+#   cp .env.example .env      # set BRICKARR_DB_PASSWORD first
+#   docker compose -f compose.mariadb.example.yaml up -d
+#
+# MariaDB is pinned by tag plus digest; bump both together
+# (`docker buildx imagetools inspect mariadb:<tag>` shows the digest).
+# Docker secrets work too: any BRICKARR_<NAME>_FILE fills BRICKARR_<NAME>, so
+# BRICKARR_DB_PASSWORD_FILE: /run/secrets/<name> can replace the password line.
+
+name: brickarr
+
+services:
+  brickarr:
+    image: ghcr.io/monsterbandit/brickarr:latest
+    container_name: brickarr
+    restart: unless-stopped
+    ports:
+      - "5858:5858"
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+      UMASK: "${UMASK:-022}"
+      BRICKARR_DB_TYPE: mariadb
+      BRICKARR_DB_HOST: mariadb
+      BRICKARR_DB_PORT: "3306"
+      BRICKARR_DB_NAME: "${BRICKARR_DB_NAME:-brickarr}"
+      BRICKARR_DB_USER: "${BRICKARR_DB_USER:-brickarr}"
+      BRICKARR_DB_PASSWORD: "${BRICKARR_DB_PASSWORD:?BRICKARR_DB_PASSWORD must be set in .env}"
+    volumes:
+      - ./config:/config     # settings and logs
+      - ./library:/library   # your LEGO files
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - brickarr
+
+  mariadb:
+    image: mariadb:11.8.9-noble@sha256:f16d7a344413e519dff518f27bdb221388f84b0d274c97c4fb5f2cb0dc1b34fa
+    container_name: brickarr-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: "${BRICKARR_DB_NAME:-brickarr}"
+      MARIADB_USER: "${BRICKARR_DB_USER:-brickarr}"
+      MARIADB_PASSWORD: "${BRICKARR_DB_PASSWORD:?BRICKARR_DB_PASSWORD must be set in .env}"
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - brickarr
+
+networks:
+  brickarr:
+
+volumes:
+  mariadb-data:

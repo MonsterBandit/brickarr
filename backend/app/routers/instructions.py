@@ -55,9 +55,9 @@ def download_instructions(
 ):
     set_no = _set_no_for_owned(db, owned_id)
     ids = body.instruction_ids if body else None
-    job_id = jobs.new_job_id()
-    bg.add_task(jobs.download_instructions_job, set_no, ids, job_id)
-    return {"jobId": job_id, "status": "queued"}
+    job = jobs.enqueue(db, jobs.KIND_DOWNLOAD_INSTRUCTIONS, f"Download instructions {set_no}")
+    bg.add_task(jobs.download_instructions_job, set_no, ids, job.id)
+    return {"jobId": job.id, "status": "queued"}
 
 
 @router.get("/instructions/{instruction_id}/file")

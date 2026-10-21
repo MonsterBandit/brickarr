@@ -49,8 +49,8 @@ def _configure_logging() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    settings.config_dir.mkdir(parents=True, exist_ok=True)
-    settings.storage_dir.mkdir(parents=True, exist_ok=True)
+    for d in (settings.config_dir, settings.library_dir, settings.cache_dir):
+        d.mkdir(parents=True, exist_ok=True)
     _configure_logging()
     get_fernet()
     db = SessionLocal()
@@ -66,7 +66,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="Brickarr",
-    version="0.1.0-alpha.1",
+    version=settings.version,
     default_response_class=JSONResponse,
     lifespan=lifespan,
 )

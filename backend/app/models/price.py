@@ -5,10 +5,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import CHAR, DECIMAL, BigInteger, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import CHAR, DECIMAL, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import Base
+from app.db import Base, BigIntPK
 from app.models.catalog import ItemType
 
 
@@ -32,12 +32,12 @@ class PriceCache(Base):
         {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"},
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType, name="price_item_type"), nullable=False)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType, name="price_item_type", native_enum=False), nullable=False)
     item_no: Mapped[str] = mapped_column(String(32), nullable=False)
     color_id: Mapped[Optional[int]] = mapped_column(ForeignKey("color.color_id"), nullable=True)
-    guide_type: Mapped[GuideType] = mapped_column(Enum(GuideType, name="price_guide_type"), nullable=False)
-    condition: Mapped[PriceCondition] = mapped_column(Enum(PriceCondition, name="price_condition"), nullable=False)
+    guide_type: Mapped[GuideType] = mapped_column(Enum(GuideType, name="price_guide_type", native_enum=False), nullable=False)
+    condition: Mapped[PriceCondition] = mapped_column(Enum(PriceCondition, name="price_condition", native_enum=False), nullable=False)
     currency: Mapped[str] = mapped_column(CHAR(3), nullable=False)
     min_price: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(12, 4), nullable=True)
     max_price: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(12, 4), nullable=True)

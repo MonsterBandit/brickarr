@@ -31,7 +31,7 @@ from app.schemas.sets import (
     SetSummary,
 )
 from app.schemas.value import SetValue, ValueLinks
-from app.services import bricklink, brickset, buylist as buylist_service
+from app.services import brickset, buylist as buylist_service, catalog_mirror
 from app.services.ownership import (
     derive,
     overrides_for_owned_item,
@@ -142,49 +142,27 @@ def lookup_sets(
     db: Session = Depends(get_db),
     _=Depends(require_auth),
 ):
-    have_bl = True
-    have_bs = True
-    try:
-        bricklink.get_credentials(db)
-    except bricklink.MissingCredentialsError:
-        have_bl = False
+    # Brickset only until the Rebrickable catalogue arrives (BR.DK.09).
     try:
         brickset.get_api_key(db)
     except brickset.MissingCredentialsError:
-        have_bs = False
-
-    if not have_bl and not have_bs:
         return SetLookupEnvelope(records=[], total_records=0,
                                  warning="No catalog sources configured")
 
     records: List[SetLookupRecord] = []
-    if have_bl:
-        try:
-            for it in bricklink.search_catalog(db, term):
-                records.append(SetLookupRecord(
-                    item_type=it.get("type", "SET"),
-                    set_number=it.get("no") or term,
-                    name=it.get("name"),
-                    year=it.get("year_released"),
-                    thumbnail_url=it.get("thumbnail_url"),
-                    owned=False,
-                ))
-        except Exception:  # noqa: BLE001
-            pass
-    if not records and have_bs:
-        try:
-            for s in brickset.search_catalog(db, term):
-                records.append(SetLookupRecord(
-                    item_type="SET",
-                    set_number=str(s.get("number") or s.get("setNumber") or term),
-                    name=s.get("name"),
-                    year=s.get("year"),
-                    theme=s.get("theme"),
-                    thumbnail_url=s.get("image", {}).get("thumbnailURL") if isinstance(s.get("image"), dict) else None,
-                    owned=False,
-                ))
-        except Exception:  # noqa: BLE001
-            pass
+    try:
+        for s in brickset.search_catalog(db, term):
+            records.append(SetLookupRecord(
+                item_type="SET",
+                set_number=str(s.get("number") or s.get("setNumber") or term),
+                name=s.get("name"),
+                year=s.get("year"),
+                theme=s.get("theme"),
+                thumbnail_url=s.get("image", {}).get("thumbnailURL") if isinstance(s.get("image"), dict) else None,
+                owned=False,
+            ))
+    except Exception:  # noqa: BLE001
+        pass
 
     owned_numbers = {
         o.item_no for o in db.query(OwnedItem).filter(OwnedItem.item_type == ItemType.SET).all()
@@ -209,6 +187,11 @@ def create_set(
     db: Session = Depends(get_db),
     _=Depends(require_auth),
 ):
+    # Refuse before writing anything: there's no catalogue source until BR.DK.09.
+    if not catalog_mirror.catalogue_available():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail={"error": "ServiceUnavailable",
+                                    "message": catalog_mirror.CATALOGUE_UNAVAILABLE})
     set_no = body.set_number
     ci = db.get(CatalogItem, (ItemType.SET, set_no))
     if ci is None:
@@ -241,8 +224,8 @@ def create_set(
     db.add(owned)
     db.commit()
 
-    job_id = jobs.new_job_id()
-    bg.add_task(jobs.add_set_job, set_no, job_id)
+    job = jobs.enqueue(db, jobs.KIND_ADD_SET, f"Add set {set_no}")
+    bg.add_task(jobs.add_set_job, set_no, job.id)
     return OwnedItemOut.model_validate(owned)
 
 

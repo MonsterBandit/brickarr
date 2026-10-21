@@ -21,7 +21,7 @@ class CatalogItem(Base):
     __tablename__ = "catalog_item"
     __table_args__ = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"}
 
-    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType, name="catalog_item_type"), primary_key=True)
+    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType, name="catalog_item_type", native_enum=False), primary_key=True)
     item_no: Mapped[str] = mapped_column(String(32), primary_key=True)
     name: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     category_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

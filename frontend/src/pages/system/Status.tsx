@@ -3,8 +3,8 @@ import { api } from '../../api/client';
 import type { SystemStatus } from '../../api/types';
 import { Card } from '../../components/Card';
 
-function YesNo({ value }: { value: boolean | undefined }) {
-  if (value === undefined) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+function YesNo({ value }: { value: boolean | null | undefined }) {
+  if (value === undefined || value === null) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
   return <span style={{ color: value ? 'var(--success)' : 'var(--danger)' }}>{value ? 'Yes' : 'No'}</span>;
 }
 
@@ -21,15 +21,9 @@ export function Status() {
     <Card title="System Status">
       <div className="meta-grid">
         <div className="item"><div className="label">Version</div><div className="value">{data.version}</div></div>
-        <div className="item"><div className="label">Database</div><div className="value"><YesNo value={data.database?.connected} /></div></div>
-        <div className="item"><div className="label">BrickLink Reachable</div><div className="value"><YesNo value={data.dataSources?.bricklink?.reachable} /></div></div>
-        <div className="item"><div className="label">Brickset Reachable</div><div className="value"><YesNo value={data.dataSources?.brickset?.reachable} /></div></div>
-        <div className="item">
-          <div className="label">BrickLink Budget Remaining</div>
-          <div className="value">
-            {data.dataSources?.bricklink?.budgetRemaining ?? '—'} / {data.dataSources?.bricklink?.budgetCap ?? '—'}
-          </div>
-        </div>
+        <div className="item"><div className="label">Database</div><div className="value">{data.dbType === 'mariadb' ? 'MariaDB' : 'SQLite'}</div></div>
+        <div className="item"><div className="label">Database Connected</div><div className="value"><YesNo value={data.dbOk} /></div></div>
+        <div className="item"><div className="label">Brickset Reachable</div><div className="value"><YesNo value={data.sources?.brickset} /></div></div>
       </div>
     </Card>
   );

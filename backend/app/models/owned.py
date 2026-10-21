@@ -5,10 +5,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import BigInteger, DECIMAL, Date, DateTime, Enum, ForeignKeyConstraint, SmallInteger, String, Text
+from sqlalchemy import DECIMAL, Date, DateTime, Enum, ForeignKeyConstraint, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import Base
+from app.db import Base, BigIntPK
 from app.models.catalog import ItemType
 
 
@@ -35,15 +35,15 @@ class OwnedItem(Base):
         {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"},
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType, name="owned_item_type"), nullable=False)
+    id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType, name="owned_item_type", native_enum=False), nullable=False)
     item_no: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[OwnedStatus] = mapped_column(
-        Enum(OwnedStatus, name="owned_status"), nullable=False, default=OwnedStatus.collecting
+        Enum(OwnedStatus, name="owned_status", native_enum=False), nullable=False, default=OwnedStatus.collecting
     )
     copies: Mapped[int] = mapped_column(SmallInteger, default=1, nullable=False)
     condition: Mapped[Optional[OwnedCondition]] = mapped_column(
-        Enum(OwnedCondition, name="owned_condition"), nullable=True
+        Enum(OwnedCondition, name="owned_condition", native_enum=False), nullable=True
     )
     storage_location: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     acquired_price: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(10, 2), nullable=True)

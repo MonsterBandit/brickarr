@@ -7,17 +7,14 @@ from app.schemas.base import CamelModel
 
 
 class SourceReachability(CamelModel):
-    bricklink: Optional[bool] = None
     brickset: Optional[bool] = None
 
 
 class SystemStatus(CamelModel):
     version: str
+    db_type: str
     db_ok: bool
     sources: SourceReachability
-    bricklink_budget_used: int = 0
-    bricklink_budget_cap: int = 0
-    bricklink_budget_remaining: int = 0
 
 
 class TaskInfo(CamelModel):
@@ -35,6 +32,6 @@ class CommandRequest(CamelModel):
 
 
 class CommandAccepted(CamelModel):
-    job_id: str
+    job_id: int
     name: str
     status: str = "queued"

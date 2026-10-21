@@ -4,10 +4,12 @@
 .dockerignore
 Dockerfile
 compose.example.yaml
+compose.mariadb.example.yaml
 README.md
 docs/
 config/
-storage/
+library/
+cache/
 .env
 .env.*
 *.md
@@ -16,6 +18,9 @@ node_modules
 frontend/node_modules
 frontend/dist
 backend/app/static
+backend/tests
+backend/pytest.ini
+backend/requirements-dev.txt
 __pycache__
 *.pyc
 .venv
