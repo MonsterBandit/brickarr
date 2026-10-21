@@ -50,3 +50,7 @@ Thumbs.db
 *.tar
 build/
 dist/
+
+# session notes and GrapeRoot/dgc's per-project store; never committed (BRK-42)
+CONTEXT.md
+.dual-graph/

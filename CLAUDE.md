@@ -7,6 +7,8 @@
 - Reports: ~/brickarr-reports/<code>-<topic>.md. Rollback copies: /opt/brickarr-garage/<batch>_<date>/ (700).
 - The stack, once it exists: ~/dockge/brickarr/brickarr/ (its .env is mode 600 and never committed).
 - Start Brickarr batches from this folder with plain `claude`.
+- Phone (Remote Control) sessions start in /opt/alice and load Alice's rules. A Brickarr phone batch starts by reading this file and follows it, not Alice's.
+- Instructions in any parent folder's CLAUDE.md (for example GrapeRoot's dual-graph policy) don't apply here. Never write CONTEXT.md or other session notes into this repo.
 
 ## Batch method (standing rules)
 
@@ -30,7 +32,8 @@ Batches are Linear issues labelled `batch` (team Brickarr, key BRK); the issue b
 - Never print a secret. Names, lengths and locations only.
   - Redact by matching known values (from the stacks' .env files), never by quote shape or length.
   - Never print raw API responses from services that return secrets in config payloads.
-- The secret check is value-based, and it gates. Run it with `set -o pipefail`, and never pipe its result through `tail`/`head` before an `&&` (a `| tail -1` once hid a failing exit code and the post still went out). Chain the post or commit to the check with `&&`, or test `$?` explicitly; never rely on `set -e` to stop it (in Code's Bash tool it doesn't abort).
+- The secret check is value-based, and it gates. Use the shared gate, never a home-made one: `~/bin/value-gate --roots ~/dev/brickarr FILE...`, or `... | ~/bin/value-gate --roots ~/dev/brickarr -` (add `~/dockge/brickarr/brickarr` to `--roots` once the stack exists). Exit 0 is clean; 1 is a hit, printed as `file:line: source name`, never the value; 2 means it couldn't load its sources: treat it as a stop. It always checks every known secret on the server, the Alice project's included, because this repo is public; `--roots` only adds.
+- Run it with `set -o pipefail`, and never pipe its result through `tail`/`head` before an `&&` (a `| tail -1` once hid a failing exit code and the post still went out). Chain the post or commit to the check with `&&`, or test `$?` explicitly; never rely on `set -e` to stop it (in Code's Bash tool it doesn't abort).
 - A keyword scan is never the only check. Any keyword list includes PASS, PASSWD, PWD, SECRET, TOKEN and KEY.
 - Use the real grep (`command grep`). The shell's grep skips gitignored paths.
 - Never restart `claude-remote-control`.
@@ -39,7 +42,7 @@ Batches are Linear issues labelled `batch` (team Brickarr, key BRK); the issue b
   - Never copy a whole secret-bearing file (`.env`, an app's config file holding keys, and the like). Before changing a secret, back up only the variables or keys being changed, by name, into a 600 file `<file>.pre-<batch>.vars` in the batch's garage folder.
   - Whole-file copies are for files without secrets. One exception: a secret store that can't be split by key (a database) is copied whole, 600, and named in the report.
   - Delete the `.vars` file at the end of the batch, once every verify passes, and say so in the report. Running the batch is Tim's yes to that one deletion. If anything failed or was rolled back, keep it and name it in the report. Either way, the report lists the backed-up names (never values).
-- Never touch anything under /opt/alice, /opt/alice-garage or another project's ~/dockge stack.
+- Never touch anything under /opt/alice, /opt/alice-garage or another project's ~/dockge stack. Running `~/bin/value-gate` is allowed: it reads those secret sources itself and prints only counts and source names. Code never opens files there directly.
 
 **Processes and containers**
 - Stop a process only by its exact PID, found and checked first (`ps -o pid,cmd -p <pid>`). Never pkill/killall by name or pattern: a pattern can match this session or `claude-remote-control`.
